@@ -2511,12 +2511,21 @@ with tab7:
         
     with col_ltv:
         # LTV vs CAC Efficiency Frontier
+        # LTV vs CAC Efficiency Frontier with fail-safe trendline
         cacs = np.linspace(20, 150, 50)
         ltvs = 4.2 * cacs + np.random.normal(0, 40, 50)
         
-        fig_ltv_cac = px.scatter(x=cacs, y=ltvs, trendline="ols",
-                                labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
-                                title="LTV vs CAC Unit Economics Frontier")
+        try:
+            fig_ltv_cac = px.scatter(x=cacs, y=ltvs, trendline="ols",
+                                    labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
+                                    title="LTV vs CAC Unit Economics Frontier")
+        except:
+            # Fallback if statsmodels is missing or fails
+            fig_ltv_cac = px.scatter(x=cacs, y=ltvs,
+                                    labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
+                                    title="LTV vs CAC Unit Economics Frontier (Trendline Unavailable)")
+            st.warning("📊 Strategy Note: Trendline analysis (OLS) currently unavailable. Please check system dependencies.")
+            
         fig_ltv_cac.add_hline(y=3*cacs.mean(), line_dash="dash", line_color="#ef4444", annotation_text="Danger Zone (<3x)")
         fig_ltv_cac.add_hline(y=5*cacs.mean(), line_dash="dash", line_color="#22c55e", annotation_text="Performance Target (>5x)")
         fig_ltv_cac.update_layout(height=500)
