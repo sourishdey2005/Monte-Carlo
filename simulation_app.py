@@ -12,7 +12,8 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.inspection import permutation_importance
-# Build Stamp: Re-Deploy 2024-02-28-v2
+from sklearn.pipeline import Pipeline
+# Build Stamp: Re-Deploy 2024-02-28-v3
 try:
     import statsmodels.api as sm
     import patsy
