@@ -2672,6 +2672,11 @@ st.markdown(f"""
     <p style="font-size: 1.2rem; margin-top: 1rem;">
         <b>Architected by <a href="https://sourishdeyportfolio.vercel.app/" target="_blank" style="color: #60a5fa; text-decoration: none; border-bottom: 2px solid #60a5fa;">Sourish Dey</a></b>
     </p>
+    <div style="margin-top: 1rem;">
+        <a href="https://www.linkedin.com/in/sourish-dey-20b170206/" target="_blank" style="margin: 0 10px; color: #60a5fa; text-decoration: none;">LinkedIn</a> • 
+        <a href="https://www.instagram.com/sourish_dey_/" target="_blank" style="margin: 0 10px; color: #60a5fa; text-decoration: none;">Instagram</a> • 
+        <a href="https://github.com/sourishdey2005" target="_blank" style="margin: 0 10px; color: #60a5fa; text-decoration: none;">GitHub</a>
+    </div>
     <p style="opacity: 0.5; margin-top: 2rem; font-size: 0.8rem;">
         © 2024-2026 | Enterprise Edition | Built for Strategic Excellence
     </p>

@@ -76,6 +76,7 @@ For strategic consultations, enterprise integrations, or technical inquiries:
 - **🌐 Portfolio**: [sourishdeyportfolio.vercel.app](https://sourishdeyportfolio.vercel.app/)
 - **📸 Instagram**: [@sourish_dey_](https://www.instagram.com/sourish_dey_/)
 - **📁 GitHub**: [github.com/sourishdey2005](https://github.com/sourishdey2005)
+- **🔗 LinkedIn**: [linkedin.com/in/sourish-dey-20b170206](https://www.linkedin.com/in/sourish-dey-20b170206/)
 
 ---
 
