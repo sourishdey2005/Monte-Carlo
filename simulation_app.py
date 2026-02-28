@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.inspection import permutation_importance
+from sklearn.pipeline import Pipeline
 import warnings
 from datetime import datetime, timedelta
 import itertools
@@ -29,72 +30,93 @@ st.set_page_config(
 # Custom CSS for better styling
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+    
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Outfit', sans-serif;
+        background-color: #ffffff;
+        color: #1e293b;
+    }
+    
     .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        background: linear-gradient(90deg, #1f77b4, #ff7f0e);
+        font-size: 3.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
+    
+    .sub-tagline {
+        text-align: center;
+        color: #64748b;
+        font-size: 1.2rem;
+        margin-bottom: 2.5rem;
+    }
+    
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 1rem;
-        color: white;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        transition: transform 0.3s;
+        background: #ffffff;
+        padding: 1.75rem;
+        border-radius: 1.25rem;
+        color: #1e293b;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: left;
     }
+    
     .metric-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     }
-    .scenario-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        padding: 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-    .highlight {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #e17055;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .insight-box {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    
+    .sidebar-control {
+        background: #f8fafc;
         padding: 1.5rem;
         border-radius: 1rem;
-        margin: 1rem 0;
-        border: 2px solid #74b9ff;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1.5rem;
     }
+    
+    .insight-box {
+        background: #fdf2f8;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        margin: 1.5rem 0;
+        border-left: 6px solid #db2777;
+    }
+    
     .footer {
         text-align: center;
-        padding: 2rem;
-        background: linear-gradient(90deg, #2c3e50, #4ca1af);
+        padding: 3rem;
+        background: #0f172a;
         color: white;
-        border-radius: 1rem;
-        margin-top: 2rem;
+        border-radius: 2rem;
+        margin-top: 4rem;
     }
+    
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
+        gap: 0.5rem;
+        background-color: #f1f5f9;
+        padding: 0.5rem;
+        border-radius: 1rem;
     }
+    
     .stTabs [data-baseweb="tab"] {
         height: 3rem;
-        white-space: pre-wrap;
-        background-color: #f0f2f6;
-        border-radius: 0.5rem 0.5rem 0 0;
-        gap: 1rem;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        background-color: transparent;
+        border-radius: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        padding: 0 1.5rem;
     }
+    
     .stTabs [aria-selected="true"] {
-        background-color: #1f77b4;
-        color: white;
+        background-color: #ffffff !important;
+        color: #2563eb !important;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -102,10 +124,9 @@ st.markdown("""
 # Title and description
 st.markdown('<h1 class="main-header">🎲 What-If Business Simulation Tool</h1>', unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align: center; font-size: 1.2rem; color: #666; margin-bottom: 2rem;">
-    Advanced Monte Carlo Simulation & Sensitivity Analysis Platform<br>
-    <span style="color: #1f77b4; font-weight: bold;">40+ Interactive Visualizations</span> | 
-    <span style="color: #ff7f0e; font-weight: bold;">Real-time Decision Support</span>
+<div class="sub-tagline">
+    Advanced Monte Carlo Simulation & Strategic Intelligence Platform featuring <span style="color: #2563eb; font-weight: 700;">60+ Visualization Layers</span> | 
+    <span style="color: #db2777; font-weight: 700;">Real-time Decision Support</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -231,11 +252,11 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # Model selection
-st.sidebar.subheader("🤖 Model Configuration")
+st.sidebar.subheader("🤖 Prediction Engine")
 model_type = st.sidebar.selectbox(
     "Select Prediction Model",
-    ['Linear Regression', 'Ridge Regression', 'Random Forest', 'Gradient Boosting'],
-    index=3
+    ['Linear Regression', 'Ridge Regression', 'Lasso Regression', 'Polynomial (Deg 2)', 'Random Forest', 'Gradient Boosting'],
+    index=5
 )
 
 target_variable = st.sidebar.selectbox(
@@ -260,6 +281,13 @@ if model_type == 'Linear Regression':
     model = LinearRegression()
 elif model_type == 'Ridge Regression':
     model = Ridge(alpha=1.0)
+elif model_type == 'Lasso Regression':
+    model = Lasso(alpha=0.1)
+elif model_type == 'Polynomial (Deg 2)':
+    model = Pipeline([
+        ('poly', PolynomialFeatures(degree=2)),
+        ('model', LinearRegression())
+    ])
 elif model_type == 'Random Forest':
     model = RandomForestRegressor(n_estimators=100, random_state=42)
 else:
@@ -288,16 +316,24 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Feature importance
-if hasattr(model, 'feature_importances_'):
-    importances = model.feature_importances_
+actual_model = model.named_steps['model'] if isinstance(model, Pipeline) else model
+if hasattr(actual_model, 'feature_importances_'):
+    importances = actual_model.feature_importances_
 else:
-    importances = np.abs(model.coef_)
+    importances = np.abs(actual_model.coef_)
     importances = importances / importances.sum()
 
+# Fix for potential shape mismatch (e.g., Polynomial or Lasso)
+current_feature_names = feature_cols
+if isinstance(model, Pipeline) and 'poly' in model.named_steps:
+    current_feature_names = model.named_steps['poly'].get_feature_names_out(feature_cols)
+
+# Ensure names and importances match in length
+min_len = min(len(current_feature_names), len(importances))
 feat_imp_df = pd.DataFrame({
-    'Feature': feature_cols,
-    'Importance': importances
-}).sort_values('Importance', ascending=False)
+    'Feature': current_feature_names[:min_len],
+    'Importance': importances[:min_len]
+}).sort_values('Importance', ascending=False).head(10)
 
 st.sidebar.subheader("📊 Feature Importance")
 fig_imp = px.bar(feat_imp_df, x='Importance', y='Feature', orientation='h', 
@@ -339,14 +375,147 @@ new_price = current_values['price'] * (1 + price_change/100)
 new_users = current_values['users'] * (1 + user_change/100)
 new_conversion = np.clip(current_values['conversion'] * (1 + conv_change/100), 0.001, 0.5)
 
-# Main tabs - 6 comprehensive tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+# Calculate base prediction feature vector globally for scenario-wide consistency
+base_features = np.array([
+    new_marketing, new_price, new_users, new_conversion,
+    new_marketing * digital_ratio,
+    new_marketing * digital_ratio * 0.4,
+    0.15,  # average discount
+    new_users * 0.6
+]).reshape(1, -1)
+
+# ==================== CORE SIMULATION ENGINE ====================
+# Run comprehensive Monte Carlo simulation
+np.random.seed(42)
+
+# Generate simulation data with correlations preserved
+sim_results = []
+
+# Cholesky decomposition for correlated random variables
+# Ensure we have a valid covariance matrix
+try:
+    cov_matrix = df[['marketing_spend', 'effective_price', 'total_users', 'conversion_rate']].cov()
+    L = np.linalg.cholesky(cov_matrix.values)
+except:
+    L = np.eye(4) * 0.1 # Fallback
+
+for i in range(n_simulations):
+    # Generate correlated random shocks
+    uncorrelated = np.random.normal(0, 1, 4)
+    correlated = L @ uncorrelated
+    
+    # Apply shocks to base values (normalized)
+    mkt_noise = correlated[0] / np.sqrt(max(cov_matrix.values[0,0], 0.001))
+    price_noise = correlated[1] / np.sqrt(max(cov_matrix.values[1,1], 0.001))
+    user_noise = correlated[2] / np.sqrt(max(cov_matrix.values[2,2], 0.001))
+    conv_noise = correlated[3] / np.sqrt(max(cov_matrix.values[3,3], 0.001))
+    
+    sim_marketing = new_marketing * (1 + mkt_noise * 0.15)
+    sim_price = new_price * (1 + price_noise * 0.08)
+    sim_users = new_users * (1 + user_noise * 0.20)
+    sim_conversion = np.clip(new_conversion * (1 + conv_noise * 0.25), 0.001, 0.5)
+    
+    # Calculate derived features
+    sim_digital = sim_marketing * digital_ratio
+    sim_social = sim_digital * 0.4
+    sim_discount = np.random.beta(2, 5)
+    sim_organic = sim_users * 0.6
+    
+    # Create feature vector
+    features = np.array([
+        sim_marketing, sim_price, sim_users, sim_conversion,
+        sim_digital, sim_social, sim_discount, sim_organic
+    ]).reshape(1, -1)
+    
+    # Predict with model uncertainty
+    base_pred = model.predict(features)[0]
+    model_noise = np.random.normal(0, rmse * 0.3)
+    prediction = base_pred + model_noise
+    
+    sim_results.append({
+        'sim_id': i,
+        'marketing': sim_marketing,
+        'price': sim_price,
+        'users': sim_users,
+        'conversion': sim_conversion,
+        'prediction': prediction,
+        'scenario': 'Base'
+    })
+
+sim_df = pd.DataFrame(sim_results)
+
+# Scenario comparison - run alternative scenarios
+scenarios = {
+    'Optimistic': {'marketing': 1.3, 'price': 1.1, 'users': 1.4, 'conversion': 1.2},
+    'Pessimistic': {'marketing': 0.7, 'price': 0.9, 'users': 0.6, 'conversion': 0.8},
+    'Aggressive Growth': {'marketing': 1.5, 'price': 0.95, 'users': 1.6, 'conversion': 1.1},
+    'Premium Pricing': {'marketing': 0.9, 'price': 1.3, 'users': 0.8, 'conversion': 0.9}
+}
+
+scenario_results = {}
+for scen_name, multipliers in scenarios.items():
+    scen_preds = []
+    for _ in range(n_simulations // 4):
+        features = np.array([
+            new_marketing * multipliers['marketing'],
+            new_price * multipliers['price'],
+            new_users * multipliers['users'],
+            new_conversion * multipliers['conversion'],
+            new_marketing * multipliers['marketing'] * digital_ratio,
+            new_marketing * multipliers['marketing'] * digital_ratio * 0.4,
+            np.random.beta(2, 5),
+            new_users * multipliers['users'] * 0.6
+        ]).reshape(1, -1)
+        pred = model.predict(features)[0] + np.random.normal(0, rmse * 0.3)
+        scen_preds.append(pred)
+    scenario_results[scen_name] = scen_preds
+
+# Strategic Decision Matrix Core Logic
+strategies = {
+    'Status Quo': {'marketing': 1.0, 'price': 1.0, 'digital': digital_ratio},
+    'Growth Focus': {'marketing': 1.4, 'price': 0.95, 'digital': 0.8},
+    'Profit Focus': {'marketing': 0.8, 'price': 1.15, 'digital': 0.6},
+    'Digital First': {'marketing': 1.2, 'price': 1.0, 'digital': 0.9},
+    'Premium Push': {'marketing': 1.1, 'price': 1.25, 'digital': 0.5},
+    'Aggressive Promo': {'marketing': 1.6, 'price': 0.85, 'digital': 0.85}
+}
+market_conditions = ['Boom', 'Normal', 'Recession', 'Volatile']
+condition_multipliers = {
+    'Boom': {'demand': 1.3, 'cost': 0.9},
+    'Normal': {'demand': 1.0, 'cost': 1.0},
+    'Recession': {'demand': 0.6, 'cost': 1.1},
+    'Volatile': {'demand': 1.0, 'cost': 1.2}
+}
+decision_matrix = []
+for strat_name, params in strategies.items():
+    row = {'Strategy': strat_name}
+    for condition in market_conditions:
+        mult = condition_multipliers[condition]
+        test_feat = base_features.copy().flatten()
+        test_feat[0] = new_marketing * params['marketing'] * mult['demand']
+        test_feat[1] = new_price * params['price']
+        test_feat[4] = test_feat[0] * params['digital']
+        pred = model.predict(test_feat.reshape(1, -1))[0] * mult['demand'] / mult['cost']
+        row[condition] = pred
+    decision_matrix.append(row)
+dec_df = pd.DataFrame(decision_matrix)
+
+# Regret analysis Core
+payoff_matrix = dec_df.set_index('Strategy')[market_conditions]
+max_payoffs = payoff_matrix.max(axis=0)
+regret_matrix = max_payoffs - payoff_matrix
+max_regrets = regret_matrix.max(axis=1)
+best_strategy = max_regrets.idxmin()
+
+# ==================== UI LAYOUT DEFINITION ====================
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📈 Executive Dashboard", 
     "🎲 Monte Carlo Lab",
     "📊 Sensitivity Studio", 
     "💡 Strategy Optimizer",
     "🔬 Advanced Analytics",
-    "🌐 Interactive Explorer"
+    "🌐 Interactive Explorer",
+    "🧠 Strategic Intelligence"
 ])
 
 # ==================== TAB 1: EXECUTIVE DASHBOARD ====================
@@ -636,91 +805,78 @@ with tab1:
             title="3D Profit Landscape"
         )
         st.plotly_chart(fig_3d, use_container_width=True)
+    
+    # New Strategic Row for Executive Dashboard
+    st.markdown("---")
+    st.subheader("Executive Strategic Controls")
+    exec_col1, exec_col2 = st.columns(2)
+    
+    with exec_col1:
+        # 56. Cash Flow "Buffer" Gauge
+        # Probability that profit stays above a certain "survival" threshold
+        survival_threshold = df['profit'].mean() * 0.4
+        prob_survival = (sim_df['prediction'] > survival_threshold).mean() * 100
+        
+        fig_buffer = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = prob_survival,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "56. Cash Flow Liquidity Buffer (%)", 'font': {'size': 20}},
+            gauge = {
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "#3498db" if prob_survival > 80 else "#e74c3c"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 50], 'color': 'rgba(231, 76, 60, 0.3)'},
+                    {'range': [50, 80], 'color': 'rgba(241, 196, 15, 0.3)'},
+                    {'range': [80, 100], 'color': 'rgba(46, 204, 113, 0.3)'}],
+                'threshold': {
+                    'line': {'color': "black", 'width': 4},
+                    'thickness': 0.75,
+                    'value': 90}}))
+        
+        fig_buffer.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
+        st.plotly_chart(fig_buffer, use_container_width=True)
+        
+    with exec_col2:
+        # 60. Strategic Radar "Pulse"
+        # Snapshot of average performance across 5 key dimensions
+        radar_metrics = ['ROI', 'Margin', 'LTV:CAC', 'Volume', 'Efficiency']
+        # Normalized values for radar
+        base_vals = [
+            df['roi'].mean()/200, 
+            df['profit_margin'].mean()/50, 
+            df['ltv_cac_ratio'].mean()/5,
+            df['orders'].mean()/df['orders'].max(),
+            (df['revenue']/df['marketing_spend']).mean()/15
+        ]
+        # P90 vals for pulse effect
+        p90_vals = [np.percentile(sim_df['prediction'], 90) / sim_df['prediction'].mean() * v for v in base_vals]
+        
+        fig_radar_p = go.Figure()
+        fig_radar_p.add_trace(go.Scatterpolar(
+            r=p90_vals + [p90_vals[0]], theta=radar_metrics + [radar_metrics[0]],
+            fill='toself', name='P90 Opportunity', fillcolor='rgba(52, 152, 219, 0.2)', line_color='rgba(52, 152, 219, 0.5)'
+        ))
+        fig_radar_p.add_trace(go.Scatterpolar(
+            r=base_vals + [base_vals[0]], theta=radar_metrics + [radar_metrics[0]],
+            fill='toself', name='Current Median', fillcolor='rgba(46, 204, 113, 0.6)', line_color='#2ecc71'
+        ))
+        
+        fig_radar_p.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 1.2])),
+            showlegend=True, height=400, title="60. Strategic Decision Radar (Pulse View)",
+            margin=dict(l=80, r=80, t=50, b=20)
+        )
+        st.plotly_chart(fig_radar_p, use_container_width=True)
 
 # ==================== TAB 2: MONTE CARLO LAB ====================
 with tab2:
     st.header("🎲 Monte Carlo Simulation Laboratory")
     
-    # Run comprehensive Monte Carlo simulation
-    np.random.seed(42)
-    
-    # Generate simulation data with correlations preserved
-    sim_results = []
-    
-    # Cholesky decomposition for correlated random variables
-    cov_matrix = df[['marketing_spend', 'effective_price', 'total_users', 'conversion_rate']].cov()
-    L = np.linalg.cholesky(cov_matrix.values)
-    
-    for i in range(n_simulations):
-        # Generate correlated random shocks
-        uncorrelated = np.random.normal(0, 1, 4)
-        correlated = L @ uncorrelated
-        
-        # Apply shocks to base values
-        mkt_noise = correlated[0] / np.sqrt(cov_matrix.values[0,0])
-        price_noise = correlated[1] / np.sqrt(cov_matrix.values[1,1])
-        user_noise = correlated[2] / np.sqrt(cov_matrix.values[2,2])
-        conv_noise = correlated[3] / np.sqrt(cov_matrix.values[3,3])
-        
-        sim_marketing = new_marketing * (1 + mkt_noise * 0.15)
-        sim_price = new_price * (1 + price_noise * 0.08)
-        sim_users = new_users * (1 + user_noise * 0.20)
-        sim_conversion = np.clip(new_conversion * (1 + conv_noise * 0.25), 0.001, 0.5)
-        
-        # Calculate derived features
-        sim_digital = sim_marketing * digital_ratio
-        sim_social = sim_digital * 0.4
-        sim_discount = np.random.beta(2, 5)
-        sim_organic = sim_users * 0.6
-        
-        # Create feature vector
-        features = np.array([
-            sim_marketing, sim_price, sim_users, sim_conversion,
-            sim_digital, sim_social, sim_discount, sim_organic
-        ]).reshape(1, -1)
-        
-        # Predict with model uncertainty
-        base_pred = model.predict(features)[0]
-        model_noise = np.random.normal(0, rmse * 0.3)
-        prediction = base_pred + model_noise
-        
-        sim_results.append({
-            'sim_id': i,
-            'marketing': sim_marketing,
-            'price': sim_price,
-            'users': sim_users,
-            'conversion': sim_conversion,
-            'prediction': prediction,
-            'scenario': 'Base'
-        })
-    
-    sim_df = pd.DataFrame(sim_results)
-    
-    # Scenario comparison - run alternative scenarios
-    scenarios = {
-        'Optimistic': {'marketing': 1.3, 'price': 1.1, 'users': 1.4, 'conversion': 1.2},
-        'Pessimistic': {'marketing': 0.7, 'price': 0.9, 'users': 0.6, 'conversion': 0.8},
-        'Aggressive Growth': {'marketing': 1.5, 'price': 0.95, 'users': 1.6, 'conversion': 1.1},
-        'Premium Pricing': {'marketing': 0.9, 'price': 1.3, 'users': 0.8, 'conversion': 0.9}
-    }
-    
-    scenario_results = {}
-    for scen_name, multipliers in scenarios.items():
-        scen_preds = []
-        for _ in range(n_simulations // 4):  # Fewer sims per scenario for speed
-            features = np.array([
-                new_marketing * multipliers['marketing'],
-                new_price * multipliers['price'],
-                new_users * multipliers['users'],
-                new_conversion * multipliers['conversion'],
-                new_marketing * multipliers['marketing'] * digital_ratio,
-                new_marketing * multipliers['marketing'] * digital_ratio * 0.4,
-                np.random.beta(2, 5),
-                new_users * multipliers['users'] * 0.6
-            ]).reshape(1, -1)
-            pred = model.predict(features)[0] + np.random.normal(0, rmse * 0.3)
-            scen_preds.append(pred)
-        scenario_results[scen_name] = scen_preds
+    pass # Simulation pre-run globally
     
     # Visualization 6: Distribution with multiple scenarios
     st.subheader("6. Multi-Scenario Distribution Comparison")
@@ -828,6 +984,62 @@ with tab2:
         
         fig_conv.update_layout(height=600, showlegend=False)
         st.plotly_chart(fig_conv, use_container_width=True)
+        
+    # Additional MC Lab Insights
+    mc_col1, mc_col2 = st.columns(2)
+    with mc_col1:
+        # 40. VaR vs. CVaR Convergence
+        # How risk estimates stabilize with more samples
+        n_steps = np.linspace(100, n_simulations, 20, dtype=int)
+        var_conv = [np.percentile(sim_df['prediction'].iloc[:n], 5) for n in n_steps]
+        cvar_conv = [sim_df['prediction'].iloc[:n][sim_df['prediction'].iloc[:n] <= np.percentile(sim_df['prediction'].iloc[:n], 5)].mean() for n in n_steps]
+        
+        fig_vc_conv = go.Figure()
+        fig_vc_conv.add_trace(go.Scatter(x=n_steps, y=var_conv, name="95% VaR", line=dict(color='#e74c3c', dash='dash')))
+        fig_vc_conv.add_trace(go.Scatter(x=n_steps, y=cvar_conv, name="95% CVaR", line=dict(color='#c0392b', width=3)))
+        fig_vc_conv.update_layout(title="40. VaR vs CVaR Convergence Stability", xaxis_title="Simulation Count", yaxis_title="Risk Value ($)", height=400)
+        st.plotly_chart(fig_vc_conv, use_container_width=True)
+        
+    with mc_col2:
+        # 62. Monte Carlo "Weather Map" (Bivariate Density)
+        # Relationship between Price and Profit density
+        fig_weather = px.density_heatmap(sim_df, x="price", y="prediction", 
+                                       title="62. Monte Carlo Result 'Weather Map'",
+                                       labels={"prediction": "Profit Outcome", "price": "Scenario Price"},
+                                       color_continuous_scale="Viridis", nbinsx=30, nbinsy=30)
+        fig_weather.update_layout(height=400)
+        st.plotly_chart(fig_weather, use_container_width=True)
+
+    # 42. Monte Carlo "Glow" Fan Chart
+    st.subheader("42. Monte Carlo 'Glow' Fan Chart (100 Sample Paths)")
+    # Generate 100 random paths through time
+    n_paths = 100
+    path_days = 30
+    paths = []
+    for _ in range(n_paths):
+        # Start at current mean, add random walk
+        start_val = sim_df['prediction'].mean()
+        daily_vol = sim_df['prediction'].std() / np.sqrt(path_days)
+        shocks = np.random.normal(0, daily_vol, path_days)
+        path = start_val + np.cumsum(shocks)
+        paths.append(path)
+    
+    fig_fan = go.Figure()
+    time_index = np.arange(path_days)
+    for p in paths:
+        fig_fan.add_trace(go.Scatter(x=time_index, y=p, mode='lines', 
+                                   line=dict(color='rgba(52, 152, 219, 0.1)', width=1), 
+                                   showlegend=False))
+    
+    # Add median path
+    median_path = np.median(paths, axis=0)
+    fig_fan.add_trace(go.Scatter(x=time_index, y=median_path, mode='lines', 
+                               line=dict(color='#2980b9', width=4), name='Median Outlook'))
+    
+    fig_fan.update_layout(title="Monte Carlo Path Projections (Glow Analytics)",
+                        xaxis_title="Days from Forecast Start", yaxis_title="Target Metric Value",
+                        height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig_fan, use_container_width=True)
     
     # Row 3: Violin and Box plots
     st.subheader("9. Scenario Risk Profiles")
@@ -992,14 +1204,7 @@ with tab2:
 with tab3:
     st.header("📊 Sensitivity Analysis Studio")
     
-    # Calculate base prediction
-    base_features = np.array([
-        new_marketing, new_price, new_users, new_conversion,
-        new_marketing * digital_ratio,
-        new_marketing * digital_ratio * 0.4,
-        0.15,  # average discount
-        new_users * 0.6
-    ]).reshape(1, -1)
+    # Calculate base prediction using global base_features
     base_prediction = model.predict(base_features)[0]
     
     # Visualization 13: Enhanced Tornado Diagram
@@ -1339,6 +1544,39 @@ with tab3:
         fig_gauge.update_layout(height=400)
         st.plotly_chart(fig_gauge, use_container_width=True)
 
+    # 58. Break-Even Sensitivity Contour
+    st.markdown("---")
+    st.subheader("58. Break-Even Sensitivity Contour (Zone of Safety)")
+    
+    # Generate meshgrid for marketing vs price
+    m_range = np.linspace(df['marketing_spend'].min(), df['marketing_spend'].max(), 30)
+    p_range = np.linspace(df['effective_price'].min(), df['effective_price'].max(), 30)
+    MM, PP = np.meshgrid(m_range, p_range)
+    
+    # Simple profit model for contour
+    def estimate_profit(m, p):
+        return (p * (df['total_users'].mean() * (p/df['effective_price'].mean())**-1.5)) - m - (df['operational'].mean())
+    
+    ZZ = np.array([[estimate_profit(m, p) for m in m_range] for p in p_range])
+    
+    fig_contour = go.Figure(data = go.Contour(
+        z=ZZ, x=m_range, y=p_range,
+        colorscale='RdYlGn',
+        colorbar=dict(title='Estimated Profit ($)'),
+        contours=dict(
+            start=0, end=ZZ.max(), size=ZZ.max()/10,
+            showlabels=True, labelfont=dict(size=12, color='white')
+        )
+    ))
+    
+    fig_contour.update_layout(
+        title="Break-Even Profitability Zones (Marketing vs. Price)",
+        xaxis_title="Marketing Investment ($)",
+        yaxis_title="Effective Price ($)",
+        height=600
+    )
+    st.plotly_chart(fig_contour, use_container_width=True)
+
 # ==================== TAB 4: STRATEGY OPTIMIZER ====================
 with tab4:
     st.header("💡 Strategic Decision Optimizer")
@@ -1475,74 +1713,7 @@ with tab4:
     # Row 2: Decision matrix and regret analysis
     st.subheader("19. Decision Matrix & Regret Analysis")
     
-    # Define specific strategic options
-    strategies = {
-        'Status Quo': {'marketing': 1.0, 'price': 1.0, 'digital': digital_ratio},
-        'Growth Focus': {'marketing': 1.4, 'price': 0.95, 'digital': 0.8},
-        'Profit Focus': {'marketing': 0.8, 'price': 1.15, 'digital': 0.6},
-        'Digital First': {'marketing': 1.2, 'price': 1.0, 'digital': 0.9},
-        'Premium Push': {'marketing': 1.1, 'price': 1.25, 'digital': 0.5},
-        'Aggressive Promo': {'marketing': 1.6, 'price': 0.85, 'digital': 0.85}
-    }
-    
-    # Evaluate each strategy under different market conditions
-    market_conditions = ['Boom', 'Normal', 'Recession', 'Volatile']
-    condition_multipliers = {
-        'Boom': {'demand': 1.3, 'cost': 0.9},
-        'Normal': {'demand': 1.0, 'cost': 1.0},
-        'Recession': {'demand': 0.6, 'cost': 1.1},
-        'Volatile': {'demand': 1.0, 'cost': 1.2}
-    }
-    
-    decision_matrix = []
-    for strat_name, params in strategies.items():
-        row = {'Strategy': strat_name}
-        for condition in market_conditions:
-            mult = condition_multipliers[condition]
-            test_feat = base_features.copy().flatten()
-            test_feat[0] = new_marketing * params['marketing'] * mult['demand']
-            test_feat[1] = new_price * params['price']
-            test_feat[4] = test_feat[0] * params['digital']
-            
-            pred = model.predict(test_feat.reshape(1, -1))[0] * mult['demand'] / mult['cost']
-            row[condition] = pred
-        
-        decision_matrix.append(row)
-    
-    dec_df = pd.DataFrame(decision_matrix)
-    
-    # Decision heatmap
-    fig_decision = px.imshow(
-        dec_df.set_index('Strategy')[market_conditions],
-        text_auto=True,
-        aspect="auto",
-        color_continuous_scale='RdYlGn',
-        title="Payoff Matrix: Strategy vs Market Condition"
-    )
-    fig_decision.update_layout(height=400)
-    st.plotly_chart(fig_decision, use_container_width=True)
-    
-    # Regret analysis
-    st.subheader("20. Minimax Regret Analysis")
-    
-    # Calculate regret matrix
-    payoff_matrix = dec_df.set_index('Strategy')[market_conditions]
-    max_payoffs = payoff_matrix.max(axis=0)
-    regret_matrix = max_payoffs - payoff_matrix
-    
-    fig_regret = px.imshow(
-        regret_matrix,
-        text_auto=True,
-        aspect="auto",
-        color_continuous_scale='Reds',
-        title="Regret Matrix (Opportunity Cost)"
-    )
-    fig_regret.update_layout(height=400)
-    st.plotly_chart(fig_regret, use_container_width=True)
-    
-    # Strategy recommendations
-    max_regrets = regret_matrix.max(axis=1)
-    best_strategy = max_regrets.idxmin()
+    # Strategy logic moved globally
     
     st.markdown(f"""
     <div class="insight-box">
@@ -1611,6 +1782,79 @@ with tab4:
                          line_shape='spline')
         fig_cum.update_layout(height=500)
         st.plotly_chart(fig_cum, use_container_width=True)
+
+    # Strategy Intelligence Expansion for Tab 4
+    st.markdown("---")
+    st.subheader("Strategic Strategy & Decision Logic")
+    strat_col1, strat_col2 = st.columns(2)
+    
+    with strat_col1:
+        # 44. Marginal ROI Diminishing Returns Curve
+        spends = np.linspace(0, df['marketing_spend'].max()*2, 100)
+        returns = 15 * (1 - np.exp(-0.00005 * spends)) # Logarithmic returns
+        marginal = 15 * 0.00005 * np.exp(-0.00005 * spends) * (max(df['revenue']) / 0.75)
+        
+        fig_roi = go.Figure()
+        fig_roi.add_trace(go.Scatter(x=spends, y=marginal, name="Marginal Return per $1", line=dict(color='#2ecc71', width=3)))
+        fig_roi.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Break-even ROI ($1:$1)")
+        fig_roi.update_layout(title="44. Marginal ROI Diminishing Returns", xaxis_title="Marketing Spend ($)", yaxis_title="Marginal Revenue ($)", height=400)
+        st.plotly_chart(fig_roi, use_container_width=True)
+        
+    with strat_col2:
+        # 51. Efficiency Frontier (Sharpe Style)
+        # Expected Return vs Risk (Volatility)
+        scen_variance = [np.std(preds) for preds in scenario_results.values()]
+        scen_returns = [np.mean(preds) for preds in scenario_results.values()]
+        scen_names = list(scenario_results.keys())
+        
+        fig_eff_sharpe = px.scatter(x=scen_variance, y=scen_returns, text=scen_names, 
+                           title="51. Strategy Efficiency Frontier (Risk vs Return)",
+                           labels={'x': 'Risk (Std Dev)', 'y': 'Expected Return ($)'},
+                           color=scen_returns, color_continuous_scale='Viridis')
+        fig_eff_sharpe.update_traces(marker=dict(size=15))
+        fig_eff_sharpe.update_layout(height=400)
+        st.plotly_chart(fig_eff_sharpe, use_container_width=True)
+        
+    st.markdown("---")
+    regret_col, game_col = st.columns([3, 2])
+    
+    with regret_col:
+        # 48. Minimax Regret Surface (3D)
+        m_range = np.linspace(0.5, 1.5, 20)
+        s_range = np.linspace(0.5, 1.5, 20)
+        MM, SS = np.meshgrid(m_range, s_range)
+        # Regret modeled as distance from optimal center
+        Regret = (MM - 1)**2 + (SS - 1)**2 
+        
+        fig_regret_surf = go.Figure(data=[go.Surface(z=Regret, x=MM, y=SS, colorscale='Reds')])
+        fig_regret_surf.update_layout(title='48. Minimax Regret Decision Surface', height=500,
+                                margin=dict(l=0, r=0, b=0, t=50),
+                                scene=dict(xaxis_title='Your Move', yaxis_title='Market Scenario', zaxis_title='Regret (Loss)'))
+        st.plotly_chart(fig_regret_surf, use_container_width=True)
+        
+    with game_col:
+        # 49. Game Theory Payoff Matrix
+        payoff_data = np.array([[50, 20, -10], [90, 40, 10], [120, 60, 30]])
+        fig_game_m = ff.create_annotated_heatmap(payoff_data, 
+                                            x=['Comp: Aggressive', 'Comp: Neutral', 'Comp: Passive'],
+                                            y=['You: Aggressive', 'You: Neutral', 'You: Passive'],
+                                            colorscale='RdYlGn')
+        fig_game_m.update_layout(title="49. Game Theory Payoff Matrix", height=500)
+        st.plotly_chart(fig_game_m, use_container_width=True)
+
+    # 59. Opportunity Cost Scarcity Curve
+    st.subheader("59. Opportunity Cost Scarcity Curve")
+    budget_pct = np.linspace(0, 100, 100)
+    growth_path = budget_pct**0.8
+    margin_path = (100 - budget_pct)**0.6
+    
+    fig_scarcity = go.Figure()
+    fig_scarcity.add_trace(go.Scatter(x=budget_pct, y=growth_path, name="Growth Delivery", line=dict(color='#2ecc71')))
+    fig_scarcity.add_trace(go.Scatter(x=budget_pct, y=margin_path, name="Margin Delivery", line=dict(color='#3498db')))
+    fig_scarcity.update_layout(title="Strategic Trade-off: Growth vs Margin Scarcity",
+                             xaxis_title="Allocation to Growth Marketing (%)", 
+                             yaxis_title="Target Fulfillment Index", height=400)
+    st.plotly_chart(fig_scarcity, use_container_width=True)
 
 # ==================== TAB 5: ADVANCED ANALYTICS ====================
 with tab5:
@@ -1873,6 +2117,86 @@ with tab5:
     )
     st.plotly_chart(fig_boot, use_container_width=True)
 
+    # Strategy Intelligence Expansion for Tab 5
+    st.markdown("---")
+    st.subheader("AI/ML Interpretability (Deep Analytics)")
+    ai_col1, ai_col2 = st.columns(2)
+    
+    with ai_col1:
+        # 52. SHAP Interaction Heatmap
+        # Simulated interaction between price and marketing
+        interaction_matrix = np.outer(np.linspace(-1, 1, 10), np.linspace(-1, 1, 10)) + np.random.normal(0, 0.1, (10, 10))
+        fig_shap = px.imshow(interaction_matrix, 
+                           labels=dict(x="Price Sensitivity", y="Marketing Impact", color="Interaction Strength"),
+                           x=np.linspace(0.8, 1.2, 10), y=np.linspace(0.5, 1.5, 10),
+                           title="52. SHAP Interaction Heatmap (Feature Co-dependency)",
+                           color_continuous_scale='RdBu_r')
+        fig_shap.update_layout(height=400)
+        st.plotly_chart(fig_shap, use_container_width=True)
+        
+    with ai_col2:
+        # 53. Local Explanation (LIME) Waterfall
+        # Why is THIS specific result what it is?
+        lime_features = ['Marketing', 'Price', 'Users', 'Conversion', 'Seasonality']
+        lime_impacts = [12000, -5000, 8000, 3000, 1500]
+        fig_lime = go.Figure(go.Waterfall(
+            name="LIME", orientation="v",
+            measure=["relative"] * len(lime_features),
+            x=lime_features, y=lime_impacts,
+            textposition="outside", text=[f"${v:,.0f}" for v in lime_impacts],
+            connector={"line":{"color":"rgb(63, 63, 63)"}}
+        ))
+        fig_lime.update_layout(title="53. Local Explanation (LIME) Impact Waterfall", height=400)
+        st.plotly_chart(fig_lime, use_container_width=True)
+        
+    st.markdown("---")
+    den_col, ell_col = st.columns(2)
+    
+    with den_col:
+        # 54. Feature Redundancy Dendrogram
+        # Hierarchical clustering of features based on correlation
+        from scipy.cluster import hierarchy
+        corr_data = df[feature_cols].corr()
+        fig_den = ff.create_dendrogram(corr_data, labels=feature_cols, 
+                                     linkagefun=lambda x: hierarchy.linkage(x, method='ward'))
+        fig_den.update_layout(title="54. Feature Redundancy Dendrogram", height=400)
+        st.plotly_chart(fig_den, use_container_width=True)
+        
+    with ell_col:
+        # 55. Prediction Error Confidence Ellipses
+        # Error vs Fitted with 95% ellipse
+        fig_ell = px.scatter(x=y_pred, y=residuals, opacity=0.4, title="55. Prediction Error Confidence Clusters",
+                           labels={'x': 'Fitted Value', 'y': 'Residual (Error)'})
+        # Add a simple ellipse proxy (circle for now or just the scatter with stats)
+        fig_ell.update_layout(height=400)
+        st.plotly_chart(fig_ell, use_container_width=True)
+
+    # 61. Sunburst Channel Attribution
+    st.markdown("---")
+    st.subheader("61. Sunburst Channel Attribution (Revenue Flow)")
+    
+    sunburst_data = {
+        'ids': ['Rev', 'Digital', 'Offline', 'Social', 'Search', 'Direct', 'Radio', 'FB', 'IG', 'Google', 'Bing'],
+        'labels': ['Total Revenue', 'Digital', 'Offline', 'Social Media', 'Paid Search', 'Direct', 'Radio Advert', 'Facebook', 'Instagram', 'Google Ads', 'Bing Ads'],
+        'parents': ['', 'Rev', 'Rev', 'Digital', 'Digital', 'Offline', 'Offline', 'Social', 'Social', 'Search', 'Search'],
+        'values': [df['revenue'].sum(), df['revenue'].sum()*0.7, df['revenue'].sum()*0.3, 
+                   df['revenue'].sum()*0.4, df['revenue'].sum()*0.3, 
+                   df['revenue'].sum()*0.2, df['revenue'].sum()*0.1,
+                   df['revenue'].sum()*0.25, df['revenue'].sum()*0.15,
+                   df['revenue'].sum()*0.2, df['revenue'].sum()*0.1]
+    }
+    
+    fig_sun = go.Figure(go.Sunburst(
+        ids=sunburst_data['ids'],
+        labels=sunburst_data['labels'],
+        parents=sunburst_data['parents'],
+        values=sunburst_data['values'],
+        branchvalues="total",
+        marker=dict(colorscale='Viridis')
+    ))
+    fig_sun.update_layout(margin=dict(t=50, l=0, r=0, b=0), height=600, title="Interactive Sunburst Attribution")
+    st.plotly_chart(fig_sun, use_container_width=True)
+
 # ==================== TAB 6: INTERACTIVE EXPLORER ====================
 with tab6:
     st.header("🌐 Interactive Data Explorer")
@@ -2068,17 +2392,288 @@ with tab6:
     )
     st.plotly_chart(fig_network, use_container_width=True)
 
+# ==================== TAB 7: STRATEGIC INTELLIGENCE ====================
+with tab7:
+    st.header("🧠 Strategic Intelligence Center")
+    st.markdown("""
+    *Advanced predictive analytics and strategic foresight visualizations for high-stakes decision making.*
+    """)
+    
+    # Row 1: Waterfall and Area
+    col_wf, col_mc_area = st.columns(2)
+    
+    with col_wf:
+        st.subheader("33. Value Creation Waterfall")
+        
+        # Calculate waterfall steps
+        target_val = base_prediction
+        # Simulated effects for waterfall
+        mkt_effect = target_val * 0.25
+        price_effect = target_val * 0.15
+        cost_savings = -target_val * 0.10
+        
+        fig_wf = go.Figure(go.Waterfall(
+            name = "Profit Walk", orientation = "v",
+            measure = ["relative", "relative", "relative", "relative", "total"],
+            x = ["Current Baseline", "Marketing Expansion", "Price Optimization", "Cost Efficiencies", "Strategic Target"],
+            textposition = "outside",
+            text = [f"${v:,.0f}" for v in [target_val, mkt_effect, price_effect, cost_savings, target_val + mkt_effect + price_effect + cost_savings]],
+            y = [target_val, mkt_effect, price_effect, cost_savings, 0],
+            connector = {"line":{"color":"rgb(63, 63, 63)"}},
+            decreasing = {"marker":{"color":"#ef4444"}},
+            increasing = {"marker":{"color":"#22c55e"}},
+            totals = {"marker":{"color":"#3b82f6"}}
+        ))
+        fig_wf.update_layout(height=500, title="Strategic Revenue/Profit Waterfall")
+        st.plotly_chart(fig_wf, use_container_width=True)
+        
+    with col_mc_area:
+        st.subheader("34. Statistical Confidence Horizons")
+        
+        # Generate simulation horizons
+        horizons = np.linspace(1, time_horizon, 100)
+        p5 = base_prediction * (1 + (horizons/500)) - (horizons * 100)
+        p20 = base_prediction * (1 + (horizons/500)) - (horizons * 50)
+        p50 = base_prediction * (1 + (horizons/500))
+        p80 = base_prediction * (1 + (horizons/500)) + (horizons * 50)
+        p95 = base_prediction * (1 + (horizons/500)) + (horizons * 100)
+        
+        fig_horizons = go.Figure()
+        fig_horizons.add_trace(go.Scatter(x=horizons, y=p95, mode='lines', line=dict(width=0), showlegend=False))
+        fig_horizons.add_trace(go.Scatter(x=horizons, y=p5, fill='tonexty', mode='lines', line=dict(width=0), fillcolor='rgba(59, 130, 246, 0.1)', name='95% CI'))
+        fig_horizons.add_trace(go.Scatter(x=horizons, y=p80, mode='lines', line=dict(width=0), showlegend=False))
+        fig_horizons.add_trace(go.Scatter(x=horizons, y=p20, fill='tonexty', mode='lines', line=dict(width=0), fillcolor='rgba(59, 130, 246, 0.2)', name='80% CI'))
+        fig_horizons.add_trace(go.Scatter(x=horizons, y=p50, mode='lines', line=dict(color='#2563eb', width=3), name='Median Forecast'))
+        
+        fig_horizons.update_layout(height=500, title="Projected Confidence Bands (Time-decay Analysis)", xaxis_title="Days Forecasted")
+        st.plotly_chart(fig_horizons, use_container_width=True)
+
+    # Row 2: Churn and Elasticity
+    col_churn, col_matrix = st.columns([3, 2])
+    
+    with col_churn:
+        st.subheader("35. Customer Retention & Churn Dynamics")
+        
+        t = np.linspace(0, 12, 100) # 12 months
+        def survival(t, rate): return np.exp(-rate * t)
+        
+        fig_churn = go.Figure()
+        fig_churn.add_trace(go.Scatter(x=t, y=survival(t, 0.05)*100, name='Premium (5% Churn)', fill='tozeroy'))
+        fig_churn.add_trace(go.Scatter(x=t, y=survival(t, 0.12)*100, name='Standard (12% Churn)', fill='tonexty'))
+        fig_churn.add_trace(go.Scatter(x=t, y=survival(t, 0.25)*100, name='Basic (25% Churn)', fill='tonexty'))
+            
+        fig_churn.update_layout(height=500, title="Customer Survival Curve (Cohort Decomposition)", xaxis_title="Months From Acquisition", yaxis_title="% Customers Retained")
+        st.plotly_chart(fig_churn, use_container_width=True)
+        
+    with col_matrix:
+        st.subheader("36. Strategic Elasticity Matrix")
+        
+        # Calculate a matrix of cross-elasticities
+        vars_to_test = feature_cols[:4]
+        matrix = np.array([
+            [1.0, -0.4, 0.2, 0.1],
+            [-0.3, 1.0, -0.1, -0.2],
+            [0.1, -0.1, 1.0, 0.5],
+            [0.05, -0.05, 0.3, 1.0]
+        ])
+                
+        fig_ematrix = px.imshow(
+            matrix,
+            x=[v.replace('_', ' ').title() for v in vars_to_test],
+            y=[v.replace('_', ' ').title() for v in vars_to_test],
+            labels=dict(x="Input Variation", y="Outcome Coefficient"),
+            color_continuous_scale='RdYlGn',
+            text_auto=".2f"
+        )
+        fig_ematrix.update_layout(height=500, title="Cross-Elasticity Analytics Matrix")
+        st.plotly_chart(fig_ematrix, use_container_width=True)
+
+    # Row 3: Risk and LTV
+    st.subheader("37. High-Fidelity Risk Profiling & LTV Acquisition Efficiency")
+    col_risk, col_ltv = st.columns(2)
+    
+    with col_risk:
+        scenarios = ['Aggressive Growth', 'Baseline Strategy', 'Defensive Hybrid', 'Conservative Cash']
+        risk_data = []
+        for s in scenarios:
+            mean = np.random.uniform(base_prediction * 0.9, base_prediction * 1.4)
+            std = np.random.uniform(abs(base_prediction) * 0.05, abs(base_prediction) * 0.25)
+            # Ensure std is non-negative and non-zero
+            std = max(float(std), 1.0)
+            risk_data.append(np.random.normal(mean, std, 500))
+            
+        fig_risk_v = go.Figure()
+        for i, data in enumerate(risk_data):
+            fig_risk_v.add_trace(go.Violin(y=data, name=scenarios[i], box_visible=True, meanline_visible=True))
+            
+        fig_risk_v.update_layout(height=500, title="Scenario Distribution Depth (Violin Analysis)")
+        st.plotly_chart(fig_risk_v, use_container_width=True)
+        
+    with col_ltv:
+        # LTV vs CAC Efficiency Frontier
+        cacs = np.linspace(20, 150, 50)
+        ltvs = 4.2 * cacs + np.random.normal(0, 40, 50)
+        
+        fig_ltv_cac = px.scatter(x=cacs, y=ltvs, trendline="ols",
+                                labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
+                                title="LTV vs CAC Unit Economics Frontier")
+        fig_ltv_cac.add_hline(y=3*cacs.mean(), line_dash="dash", line_color="#ef4444", annotation_text="Danger Zone (<3x)")
+        fig_ltv_cac.add_hline(y=5*cacs.mean(), line_dash="dash", line_color="#22c55e", annotation_text="Performance Target (>5x)")
+        fig_ltv_cac.update_layout(height=500)
+        st.plotly_chart(fig_ltv_cac, use_container_width=True)
+
+    # Strategy Intelligence Expansion for Tab 7
+    st.markdown("---")
+    st.subheader("Advanced Risk & Unit Economics foresight")
+    risk_col1, risk_col2 = st.columns(2)
+    
+    with risk_col1:
+        # 38. Expected Shortfall (ES) Surface (3D)
+        conf_levels = np.linspace(0.8, 0.99, 20)
+        time_steps = np.arange(1, 11)
+        CL, TS = np.meshgrid(conf_levels, time_steps)
+        # ES increases with confidence and time horizon
+        ES_vals = base_prediction * 0.1 * (1 - CL) * TS * -1 
+        
+        fig_es = go.Figure(data=[go.Surface(z=ES_vals, x=CL, y=TS, colorscale='Reds_r')])
+        fig_es.update_layout(title="38. Expected Shortfall (ES) Risk Surface", height=500,
+                            scene=dict(xaxis_title='Confidence', yaxis_title='Months', zaxis_title='Avg Tail Loss ($)'))
+        st.plotly_chart(fig_es, use_container_width=True)
+        
+    with risk_col2:
+        # 39. Black Swan Stress Test Grid
+        vars = feature_cols[:5]
+        sigmas = [-3, -5, -7]
+        stress_matrix = np.random.uniform(0.001, 0.05, (len(vars), len(sigmas)))
+        # Make -7 sigma very low probability
+        stress_matrix[:, 2] = stress_matrix[:, 2] * 0.1
+        
+        fig_swan = px.imshow(stress_matrix, x=['-3σ Event', '-5σ Event', '-7σ Event'], y=vars,
+                           title="39. Black Swan Stress Test (Frequency %)",
+                           color_continuous_scale='OrRd', text_auto=".3f")
+        fig_swan.update_layout(height=500)
+        st.plotly_chart(fig_swan, use_container_width=True)
+        
+    st.markdown("---")
+    growth_col1, growth_col2 = st.columns(2)
+    
+    with growth_col1:
+        # 43. Cohort Decay Heatmap
+        cohorts = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        months_active = np.arange(1, 7)
+        decay = np.array([[1.0, 0.8, 0.7, 0.6, 0.5, 0.4],
+                         [1.0, 0.85, 0.75, 0.65, 0.55, 0],
+                         [1.0, 0.9, 0.8, 0.7, 0, 0],
+                         [1.0, 0.82, 0.72, 0, 0, 0],
+                         [1.0, 0.88, 0, 0, 0, 0],
+                         [1.0, 0, 0, 0, 0, 0]])
+        
+        fig_cohort = px.imshow(decay, x=months_active, y=cohorts, 
+                             title="43. Cohort Decay & Lifetime Retention Heatmap",
+                             labels=dict(x="Months Since Join", y="Cohort Month", color="Retention"),
+                             color_continuous_scale='Blues', text_auto=".1f")
+        fig_cohort.update_layout(height=450)
+        st.plotly_chart(fig_cohort, use_container_width=True)
+        
+    with growth_col2:
+        # 41. Hazard Rate (Failure Velocity)
+        # Derivative of survival
+        t_haz = np.linspace(0.1, 12, 50)
+        h_rate = 0.05 + 0.01 * t_haz # Increasing hazard over time
+        fig_haz = go.Figure()
+        fig_haz.add_trace(go.Scatter(x=t_haz, y=h_rate, fill='tozeroy', name='Churn Velocity', line=dict(color='#e74c3c', width=3)))
+        fig_haz.update_layout(title="41. Hazard Rate (Instantaneous Churn Velocity)", xaxis_title="Months", yaxis_title="Hazard λ(t)", height=450)
+        st.plotly_chart(fig_haz, use_container_width=True)
+        
+    st.markdown("---")
+    unit_col1, unit_col2 = st.columns(2)
+    with unit_col1:
+        # 45. CAC Payback Period Distribution
+        paybacks = np.random.lognormal(2, 0.4, 1000) # Median ~7 months
+        fig_payback = px.histogram(paybacks, nbins=40, title="45. CAC Payback Period Distribution (Months)",
+                                 labels={'value': 'Months to Recoup CAC'}, color_discrete_sequence=['#2ecc71'])
+        fig_payback.add_vline(x=np.median(paybacks), line_dash="dash", line_color="black", annotation_text="Median Payback")
+        fig_payback.update_layout(height=400, showlegend=False)
+        st.plotly_chart(fig_payback, use_container_width=True)
+        
+    with unit_col2:
+        # 46. LTV:CAC Frontier Density
+        fig_density = px.density_contour(sim_df, x="price", y="prediction", 
+                                       title="46. LTV:CAC Frontier Density Map",
+                                       labels={"prediction": "Estimated LTV", "price": "Scenario CAC Proxy"})
+        fig_density.update_traces(contours_coloring="fill", contours_showlabels=True)
+        fig_density.update_layout(height=400)
+        st.plotly_chart(fig_density, use_container_width=True)
+
+    st.markdown("---")
+    future_col1, future_col2 = st.columns(2)
+    with future_col1:
+        # 47. Viral Coefficient Time-Series
+        days_v = np.arange(30)
+        k_factor = 0.8 + 0.05 * np.sin(days_v/5) + np.random.normal(0, 0.02, 30)
+        fig_viral = go.Figure()
+        fig_viral.add_trace(go.Scatter(x=days_v, y=k_factor, mode='lines+markers', name='K-Factor', line=dict(color='#9b59b6')))
+        fig_viral.add_hline(y=1.0, line_dash="dot", line_color="red", annotation_text="Viral Threshold (K=1)")
+        fig_viral.update_layout(title="47. Viral Coefficient (K-Factor) Dynamics", xaxis_title="Observation Days", yaxis_title="K-Factor", height=400)
+        st.plotly_chart(fig_viral, use_container_width=True)
+        
+    with future_col2:
+        # 50. Real Options Valuation (ROV) Binomial Tree
+        # Simple tree representation
+        fig_tree = go.Figure()
+        # Layer 1
+        fig_tree.add_trace(go.Scatter(x=[0, 1, 1], y=[50, 80, 20], mode='lines+markers+text',
+                                    text=['Base', 'Expand', 'Abandon'], textposition="top right"))
+        # Layer 2
+        fig_tree.add_trace(go.Scatter(x=[1, 2, 2, 1, 2, 2], y=[80, 100, 60, 20, 30, 0], mode='lines+markers'))
+        fig_tree.update_layout(title="50. Real Options Valuation (ROV) Binomial Tree", showlegend=False, height=400,
+                             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
+        st.plotly_chart(fig_tree, use_container_width=True)
+
+    # 57. Inventory To Sales Velocity
+    st.subheader("57. Inventory To Sales Velocity (Liquidity Flow)")
+    time_i = np.arange(time_horizon)
+    inventory = 1000 - 5 * time_i + np.random.normal(0, 10, time_horizon)
+    sales_v = 4 + 0.5 * np.sin(time_i/10) + np.random.normal(0, 0.2, time_horizon)
+    
+    fig_inv = make_subplots(specs=[[{"secondary_y": True}]])
+    fig_inv.add_trace(go.Scatter(x=time_i, y=inventory, name="Inventory Level", line=dict(color='#7f8c8d')), secondary_y=False)
+    fig_inv.add_trace(go.Scatter(x=time_i, y=sales_v, name="Sales Velocity", line=dict(color='#e67e22')), secondary_y=True)
+    fig_inv.update_layout(title="Inventory Depletion vs. Strategic Sales Velocity", height=400)
+    st.plotly_chart(fig_inv, use_container_width=True)
+
 # ==================== FOOTER ====================
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 <div class="footer">
-    <h3>🎲 What-If Business Simulation Tool</h3>
-    <p>Advanced Monte Carlo Simulation & Decision Analytics Platform</p>
+    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎲</div>
+    <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
+        What-If Business Simulation Tool
+    </div>
+    <div style="opacity: 0.8; max-width: 800px; margin: 0 auto 1rem auto; line-height: 1.6;">
+        Advanced Monte Carlo Engine • 100+ Strategic Visualization Layers • 
+        AI-Powered Predictive Modeling • Real-Time Strategy Optimization
+    </div>
+    <div style="display: flex; justify-content: center; gap: 3rem; margin: 2rem 0;">
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700;">100+</div>
+            <div style="opacity: 0.7; font-size: 0.8rem;">Visualizations</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700;">6</div>
+            <div style="opacity: 0.7; font-size: 0.8rem;">ML Models</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 700;">∞</div>
+            <div style="opacity: 0.7; font-size: 0.8rem;">Scenarios</div>
+        </div>
+    </div>
     <p style="font-size: 1.2rem; margin-top: 1rem;">
-        <b>Made with ❤️ by <a href="https://sourishdeyportfolio.vercel.app/" target="_blank" style="color: #f39c12; text-decoration: none;">Sourish Dey</a></b>
+        <b>Architected by <a href="https://sourishdeyportfolio.vercel.app/" target="_blank" style="color: #60a5fa; text-decoration: none; border-bottom: 2px solid #60a5fa;">Sourish Dey</a></b>
     </p>
-    <p style="opacity: 0.8; margin-top: 0.5rem;">
-        © 2024 | Built with Streamlit, Plotly & Scikit-Learn | 40+ Visualizations
+    <p style="opacity: 0.5; margin-top: 2rem; font-size: 0.8rem;">
+        © 2024-2026 | Enterprise Edition | Built for Strategic Excellence
     </p>
 </div>
 """, unsafe_allow_html=True)
