@@ -82,4 +82,4 @@ For strategic consultations, enterprise integrations, or technical inquiries:
 
 ## 📜 License
 This project is architected for **Strategic Excellence**.  
-© 2024-2026 Sourish Dey | All Rights Reserved.
+© 2026 Sourish Dey | All Rights Reserved.
