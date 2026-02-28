@@ -13,12 +13,7 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
-# Build Stamp: Re-Deploy 2024-02-28-v3
-try:
-    import statsmodels.api as sm
-    import patsy
-except ImportError:
-    pass
+# Build Stamp: Re-Deploy 2024-02-28-v5-DEPENDENCY-FREE
 import warnings
 from datetime import datetime, timedelta
 import itertools
@@ -2516,25 +2511,31 @@ with tab7:
         st.plotly_chart(fig_risk_v, use_container_width=True)
         
     with col_ltv:
-        # LTV vs CAC Efficiency Frontier
-        # LTV vs CAC Efficiency Frontier with fail-safe trendline
+        # LTV vs CAC Efficiency Frontier with ROBUST manual trendline (eliminates statsmodels dependency)
+        # Build Stamp: Re-Deploy 2024-02-28-v4-FINAL-ROBUST
         cacs = np.linspace(20, 150, 50)
         ltvs = 4.2 * cacs + np.random.normal(0, 40, 50)
         
-        try:
-            fig_ltv_cac = px.scatter(x=cacs, y=ltvs, trendline="ols",
-                                    labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
-                                    title="LTV vs CAC Unit Economics Frontier")
-        except:
-            # Fallback if statsmodels is missing or fails
-            fig_ltv_cac = px.scatter(x=cacs, y=ltvs,
-                                    labels={'x': 'Customer Acquisition Cost ($)', 'y': 'Lifetime Value ($)'},
-                                    title="LTV vs CAC Unit Economics Frontier (Trendline Unavailable)")
-            st.warning("📊 Strategy Note: Trendline analysis (OLS) currently unavailable. Please check system dependencies.")
-            
-        fig_ltv_cac.add_hline(y=3*cacs.mean(), line_dash="dash", line_color="#ef4444", annotation_text="Danger Zone (<3x)")
-        fig_ltv_cac.add_hline(y=5*cacs.mean(), line_dash="dash", line_color="#22c55e", annotation_text="Performance Target (>5x)")
-        fig_ltv_cac.update_layout(height=500)
+        # Calculate manual OLS trendline
+        z = np.polyfit(cacs, ltvs, 1)
+        p = np.poly1d(z)
+        trend_cacs = np.array([cacs.min(), cacs.max()])
+        trend_ltvs = p(trend_cacs)
+        
+        fig_ltv_cac = go.Figure()
+        # Add scatter points
+        fig_ltv_cac.add_trace(go.Scatter(x=cacs, y=ltvs, mode='markers', name='Unit Economics Data', 
+                                       marker=dict(color='#3b82f6', opacity=0.7)))
+        # Add manual trendline
+        fig_ltv_cac.add_trace(go.Scatter(x=trend_cacs, y=trend_ltvs, mode='lines', name='OLS Trend (Manual)',
+                                       line=dict(color='#ef4444', width=2, dash='dash')))
+        
+        fig_ltv_cac.update_layout(height=500, title="LTV vs CAC Unit Economics Frontier",
+                                xaxis_title="Customer Acquisition Cost ($)",
+                                yaxis_title="Lifetime Value ($)")
+        
+        fig_ltv_cac.add_hline(y=3*cacs.mean(), line_dash="dash", line_color="#ef4444", opacity=0.5, annotation_text="Danger Zone (<3x)")
+        fig_ltv_cac.add_hline(y=5*cacs.mean(), line_dash="dash", line_color="#22c55e", opacity=0.5, annotation_text="Performance Target (>5x)")
         st.plotly_chart(fig_ltv_cac, use_container_width=True)
 
     # Strategy Intelligence Expansion for Tab 7
