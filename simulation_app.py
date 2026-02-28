@@ -13,6 +13,8 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
+import statsmodels.api as sm
+import patsy
 import warnings
 from datetime import datetime, timedelta
 import itertools
